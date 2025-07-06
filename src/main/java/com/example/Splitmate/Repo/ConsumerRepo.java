@@ -1,10 +1,10 @@
 package com.example.Splitmate.Repo;
 
-
-import com.example.Splitmate.Entity.ItemTable;
+import com.example.Splitmate.Entity.Consumer;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ItemTableRepo extends JpaRepository<ItemTable,Long> {
+public interface ConsumerRepo extends JpaRepository<Consumer,Long> {
+
 }

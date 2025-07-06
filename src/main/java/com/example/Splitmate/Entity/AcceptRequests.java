@@ -3,8 +3,6 @@ package com.example.Splitmate.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 
 @Entity
@@ -16,19 +14,21 @@ import org.hibernate.annotations.OnDeleteAction;
 public class AcceptRequests {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "Id")
     private long Id;
 
-    @Column(name = "nam")
-    private String nameId;
-
-    @Column(unique = true)
+    @Column(name = "name")
     private String name;
+
+    @Column(name ="User_Id")
+    private String userId;
     private boolean isCheck;
     private String role;
+    private String avatar;
+    private int tokenID;
 
     @ManyToOne
-    @JoinColumn(name="username" ,referencedColumnName = "username")
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    private MainUser username;
+    @JoinColumn(name="groupId" ,referencedColumnName = "id")
+    private Groups groupId;
 
 }

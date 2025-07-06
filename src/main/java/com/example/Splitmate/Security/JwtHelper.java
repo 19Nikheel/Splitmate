@@ -1,17 +1,30 @@
 package com.example.Splitmate.Security;
 
+import com.example.Splitmate.Config.CustomUserDetails;
 import com.example.Splitmate.Entity.AcceptRequests;
 import com.example.Splitmate.Entity.MainUser;
 import com.example.Splitmate.Repo.AcceptRequestsRepo;
 import com.example.Splitmate.Repo.MainuserRepo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParserBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.DeserializationException;
+import io.jsonwebtoken.io.Deserializer;
+import io.jsonwebtoken.lang.Maps;
+import io.jsonwebtoken.security.Keys;
+import org.antlr.v4.runtime.Token;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.codec.cbor.Jackson2CborDecoder;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +42,7 @@ public class JwtHelper {
 
 
     //requirement :
-    public static final long JWT_TOKEN_VALIDITY =   60 * 60;
+    public static final long JWT_TOKEN_VALIDITY =  36* 60 * 60;
 
     //    public static final long JWT_TOKEN_VALIDITY =  60;
     private String secret = "afafasfafafasfasfasfafacasdasfasxASFACASDFACASDFASFASFDAFASFASDAADSCSDFADCVSGCFVADXCcadwavfsfarvf";
@@ -50,25 +63,40 @@ public class JwtHelper {
     }
 
     //for retrieveing any information from token we will need the secret key
-    private Claims getAllClaimsFromToken(String token) {
+    public Claims getAllClaimsFromToken(String token) {
         return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
     }
 
+    public int getTokenIDFromToken(String token) {
+
+        Key key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+
+        Claims body = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return body.get("tokenId",Integer.class);
+    }
+
+
     //check if the token has expired
-    private Boolean isTokenExpired(String token) {
+    public Boolean isTokenExpired(String token) {
         final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(new Date());
     }
 
     //generate token for user
-    public String generateToken(UserDetails userDetails,int n) {
+    public String generateToken(CustomUserDetails userDetails) {
 
         if(userDetails.getUsername().startsWith("@#")){
-            AcceptRequests art=arp.findByName(userDetails.getUsername().substring(2))
+            AcceptRequests art=arp.findByUserId(userDetails.getUsername().substring(2))
                     .orElseThrow(()-> new UsernameNotFoundException("User not found"));
             Map<String, Object> claims = new HashMap<>();
             claims.put("role", art.getRole());
-            return doGenerateToken(claims, userDetails.getUsername(),n);
+            claims.put("tokenId", art.getTokenID());
+            return doGenerateToken(claims, userDetails.getUsername());
         }
 
         MainUser user = userrepo.findByUsername(userDetails.getUsername())
@@ -76,7 +104,8 @@ public class JwtHelper {
         Map<String, Object> claims = new HashMap<>();
 
         claims.put("role", user.getRole());
-        return doGenerateToken(claims, userDetails.getUsername(),n);
+        claims.put("tokenId",-1);
+        return doGenerateToken(claims, userDetails.getUsername());
     }
 
     //while creating the token -
@@ -84,16 +113,20 @@ public class JwtHelper {
     //2. Sign the JWT using the HS512 algorithm and secret key.
     //3. According to JWS Compact Serialization(https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41#section-3.1)
     //   compaction of the JWT to a URL-safe string
-    private String doGenerateToken(Map<String, Object> claims, String subject,int n) {
+    public String doGenerateToken(Map<String, Object> claims, String subject) {
 
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + n*JWT_TOKEN_VALIDITY * 1000))
+                .setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000))
                 .signWith(SignatureAlgorithm.HS512, secret).compact();
     }
 
     //validate token
-    public Boolean validateToken(String token, UserDetails userDetails) {
+    public Boolean validateToken(String token, CustomUserDetails userDetails) {
         final String username = getUsernameFromToken(token);
+        int tokenId = getTokenIDFromToken(token);
+        if(tokenId!=-1 && tokenId!=userDetails.getTokenId()){
+            return false;
+        }
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 }

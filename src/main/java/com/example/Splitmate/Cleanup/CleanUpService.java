@@ -17,10 +17,10 @@ public class CleanUpService {
     private MainuserRepo userrepo;
 
 
-    @Scheduled(fixedRate= 2 * 60 *60 *1000)
-    public void cleaner(){
-        LocalDateTime current=LocalDateTime.now();
-        userrepo.deleteByTimeOfDeletionLessThanEqual(current);
-    }
+   // @Scheduled(fixedRate= 2 * 60 *60 *1000)
+//    public void cleaner(){
+//        LocalDateTime current=LocalDateTime.now();
+//        userrepo.deleteByTimeOfDeletionLessThanEqual(current);
+//    }
 
 }

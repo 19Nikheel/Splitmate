@@ -20,7 +20,7 @@ public class MainUser {
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
-    private long Idm;
+    private long Id;
     private String name;
 
     @Column(unique = true ,nullable = false)
@@ -30,21 +30,18 @@ public class MainUser {
 
     private String contactNo;
 
-    @Column(name= "ForTime" ,nullable=false)
-    private int forTime;
+//    @Column(name= "ForTime" ,nullable=false)
+//    private int forTime;
 
     private String role;
 
-    private String status;
-
     private LocalDateTime timeOfCreation;
 
-    private LocalDateTime timeOfDeletion;
+//    private LocalDateTime timeOfDeletion;
 
 
     @PrePersist
     public void prePersist() {
         this.timeOfCreation = LocalDateTime.now(); // Set current timestamp
-        this.timeOfDeletion = this.timeOfCreation.plusHours(forTime); // Calculate deletion time
     }
 }

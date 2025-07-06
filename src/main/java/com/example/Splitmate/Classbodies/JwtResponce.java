@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-
-
 public class JwtResponce {
     private String Jwttoken;
+    private String name;
+    private String role;
     private String username;
 }

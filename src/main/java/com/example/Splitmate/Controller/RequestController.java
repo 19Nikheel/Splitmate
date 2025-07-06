@@ -1,19 +1,18 @@
 package com.example.Splitmate.Controller;
 
 import com.example.Splitmate.Entity.AcceptRequests;
+import com.example.Splitmate.Entity.Groups;
 import com.example.Splitmate.Entity.MainUser;
 import com.example.Splitmate.Entity.PushRequests;
 import com.example.Splitmate.Repo.AcceptRequestsRepo;
+import com.example.Splitmate.Repo.GroupRepo;
 import com.example.Splitmate.Repo.MainuserRepo;
 import com.example.Splitmate.Repo.PushRequestRepo;
-import org.hibernate.JDBCException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,33 +32,41 @@ public class RequestController {
     @Autowired
     private MainuserRepo mur;
 
+    @Autowired
+    private GroupRepo groupRepo;
 
 
-    @GetMapping("/invite-request/{username}")
-    public ResponseEntity<?> checklink(@PathVariable("username") String uname){
-        String name;
-        Optional<MainUser> byUsername = mur.findByUsername(uname);
-        if(byUsername.isPresent() ){
-            name=byUsername.get().getUsername();
-        }else{
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invite id is not correct");
-        }
-        return ResponseEntity.ok().body(name);
-    }
+
+
+//    //Wrong
+//    @GetMapping("/invite-request/{groupId}")
+//    public ResponseEntity<?> checklink(@PathVariable("groupId") String groupId){
+//        String Id;
+//        Optional<Group> byUsername = groupRepo.findByUsername(groupId);
+//        if(byUsername.isPresent() ){
+//            Id=byUsername.get().getGroupId();
+//        }else{
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invite id is not correct");
+//        }
+//        return ResponseEntity.ok().body(Id);
+//    }
+
 
     @PostMapping("/push-request")
-    private ResponseEntity<String> sendRequest(@RequestParam("username") String username , @RequestParam ("name") String name){
+    public ResponseEntity<String> sendRequest(@RequestParam("groupId") String groupId , @RequestParam ("name") String name){
+        Optional<Groups> byGroupId = groupRepo.findByGroupId(groupId);
+        if(byGroupId.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Group not exist!");  ///important
+        }
 
-        if(art.existsByUsernameAndName(mur.findByUsername(username).get(),name)){
+        if(art.existsByGroupIdAndName(byGroupId.get(),name)){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name already exist!");  ///important
         }
+
         PushRequests rq=new PushRequests();
-        rq.setRequestNames(name);
-        Optional<MainUser> byUsername = mur.findByUsername(username);
-        if(!byUsername.isPresent() ) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Username not found");
-        }
-        rq.setUsername(byUsername.get());
+                                                                                //Think again  conflict
+        rq.setName(name);
+        rq.setGroupId(byGroupId.get());
         rq.setLastUpdatedTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")));
         requestRepo.save(rq);
         return ResponseEntity.ok().body("Request sent");
@@ -67,23 +74,36 @@ public class RequestController {
 
 
 
+
     @PostMapping("/accept-request")
-    private ResponseEntity<String> cnf_request(@RequestParam ("username") String username ,@RequestParam ("name") String name){
+    @Transactional
+    public ResponseEntity<String> cnf_request(@RequestParam ("groupId") String gid ,@RequestParam ("name") String name){
 
         AcceptRequests ar=new AcceptRequests();
-        Optional<MainUser> byUsername = mur.findByUsername(username);
-        if(!byUsername.isPresent() ) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Username not found");
+        Optional<MainUser> byUsername = mur.findByUsername(name);
+        Optional<Groups> byGroupId = groupRepo.findByGroupId(gid);
+
+        if(byGroupId.isEmpty() ) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
         }
-        ar.setUsername(byUsername.get());
-        ar.setName(name+"+"+username);
-        ar.setNameId(name);
-        ar.setRole("USER");
+        ar.setGroupId(byGroupId.get());
+        ar.setUserId(name+"+"+gid);
+
+        if(byUsername.isPresent()){
+            ar.setName(byUsername.get().getName());    ///  Conflict point when member vs guest name clash
+            ar.setRole("MEMBER");
+            ar.setTokenID(-1);
+        }else{
+            ar.setName(name);
+            ar.setRole("GUEST");
+            ar.setTokenID(1);
+        }
+
         ar.setCheck(true);
         try {
             art.save(ar);
 
-            requestRepo.deleteByRequestNamesAndUsername(name,username);
+            requestRepo.deleteByNameAndGroupId(name,gid);
 
             return ResponseEntity.ok("Successfully Request Accepted");
         }catch(DataIntegrityViolationException  e ){
@@ -96,10 +116,11 @@ public class RequestController {
     }
 
     @PutMapping("/realive-auth")
-    public ResponseEntity<String> realiveRequest(@RequestParam("username") String username,@RequestParam("name") String name){
-        MainUser user= mur.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("user name not found"));
-        AcceptRequests found = art.findByUsernameAndNameId(user,name).orElseThrow(() -> new UsernameNotFoundException("user name not found"));
+    public ResponseEntity<String> realiveRequest(@RequestParam("groupId") String groupId,@RequestParam("name") String name){
+        Groups gid = groupRepo.findByGroupId(groupId).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
+        AcceptRequests found = art.findByGroupIdAndName(gid,name).orElseThrow(() -> new UsernameNotFoundException("user name not found"));
         found.setCheck(true);
+        found.setTokenID((found.getTokenID()+17)%Integer.MAX_VALUE);
         art.save(found);
         return ResponseEntity.ok("Successful");
     }

@@ -23,32 +23,40 @@ public class CustomUserDetailService implements UserDetailsService {
     @Autowired
     private AcceptRequestsRepo art;
 
+
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         
         if(username.startsWith("@#")){
 
             username=username.substring(2);
 
-            AcceptRequests usere = art.findByName(username)
+            AcceptRequests usere = art.findByUserId(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            String encodedPassword = pse.encode(usere.getUsername().getUsername());
+            String encodedPassword = pse.encode(usere.getGroupId().getGroupId());
 
-            return org.springframework.security.core.userdetails.User
-                    .withUsername("@#"+usere.getName())
+//            return org.springframework.security.core.userdetails.User
+//                    .withUsername("@#"+usere.getUserId())
+//                    .password(encodedPassword)
+//                    .roles(usere.getRole())
+//                    .
+//                    .build();
+            return CustomUserDetails.withUsername("@#"+usere.getUserId())
                     .password(encodedPassword)
                     .roles(usere.getRole())
+                    .tokenId(usere.getTokenID())
                     .build();
         }else{
             Optional<MainUser> byUsername = userRepo.findByUsername(username);
             if(byUsername.isPresent()){
                 MainUser user =byUsername.get();
 
-                return org.springframework.security.core.userdetails.User
+                return CustomUserDetails
                         .withUsername(user.getUsername())
                         .password(user.getPassword())
                         .roles(user.getRole())
+                        .tokenId(-1)
                         .build();
             }else{
                 throw new UsernameNotFoundException("User not found");

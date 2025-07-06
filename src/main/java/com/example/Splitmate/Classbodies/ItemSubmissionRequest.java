@@ -6,5 +6,6 @@ import java.util.List;
 
 @Data
 public class ItemSubmissionRequest {
+    private Double paid;
     private List<ItemDTO> items;
 }

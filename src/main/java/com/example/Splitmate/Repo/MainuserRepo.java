@@ -20,8 +20,8 @@ public interface MainuserRepo extends JpaRepository<MainUser,Long> {
 
     boolean existsByUsername(String username);
 
-    @Transactional
-    void deleteByTimeOfDeletionLessThanEqual(LocalDateTime time);
+//    @Transactional
+//    void deleteByTimeOfDeletionLessThanEqual(LocalDateTime time);
 
 
 

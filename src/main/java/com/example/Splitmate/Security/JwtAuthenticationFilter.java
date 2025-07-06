@@ -1,5 +1,7 @@
 package com.example.Splitmate.Security;
 
+import com.example.Splitmate.Config.CustomUserDetailService;
+import com.example.Splitmate.Config.CustomUserDetails;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
@@ -27,14 +29,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtHelper jwthelper;
 
     @Autowired
-    private UserDetailsService userDetailsService;
+    private CustomUserDetailService userDetailsService;
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String requestPath = request.getServletPath();
 
         // Skip JWT validation for /signup
-        if (requestPath.equals("/signup") || requestPath.equals("/login")) {
+        if (requestPath.equals("/signup") || requestPath.equals("/login")||
+                requestPath.equals("/signup-guest")|| requestPath.equals("/guest-login")||
+                requestPath.equals("/login-user")|| requestPath.equals("/invite-request/**")|| requestPath.equals("/push-request")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -50,33 +54,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 username = this.jwthelper.getUsernameFromToken(token);
             } catch (IllegalArgumentException e) {
+
                 logger.info("Illegal Argument while fetching the username !!");
-                e.printStackTrace();
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid token argument.");
             } catch (ExpiredJwtException e) {
                 logger.info("Given jwt token is expired !!");
-                e.printStackTrace();
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expired.");
             } catch (MalformedJwtException e) {
                 logger.info("Some changed has done in token !! Invalid Token");
-                e.printStackTrace();
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Malformed token.");
             } catch (Exception e) {
-                e.printStackTrace();
+
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Token processing failed.");
             }
 
 
         }else{
-            logger.info("Header invalid");
+            logger.info("Authorization header is missing or invalid");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authorization header missing or invalid.");
+
         }
 
         if(username!=null && SecurityContextHolder.getContext().getAuthentication()==null){
-            UserDetails user=this.userDetailsService.loadUserByUsername(username);
+            CustomUserDetails user=this.userDetailsService.loadUserByUsername(username);
+
             boolean validatetoken=this.jwthelper.validateToken(token,user);
 
             if(validatetoken){
                 UsernamePasswordAuthenticationToken authentication=new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println(SecurityContextHolder.getContext().getAuthentication().getDetails());
             }else{
-                logger.info("validation fail");
+                logger.info("Token validation failed.");
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid token.");
+
             }
         }
         filterChain.doFilter(request,response);
