@@ -1,9 +1,11 @@
 package com.example.Splitmate.Classbodies;
 
+
 import lombok.Data;
 
 @Data
-public class ItemPayerDTO {
+public class ConsumerDTO {
     private String name;
-    private double amount;
+    private int quantity;
+    private int isShared;
 }

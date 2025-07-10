@@ -11,4 +11,6 @@ public interface Admin_GRepo extends JpaRepository<Admin_Group,Long> {
     @Query(value = "SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END FROM admin_group WHERE Group_id = :gid AND username = :username", nativeQuery = true)
     boolean existsByGidAndUsername(@Param("gid") long gid, @Param("username") String username);
 
+
+
 }

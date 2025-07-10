@@ -21,6 +21,8 @@ public interface PushRequestRepo extends JpaRepository<PushRequests,Long> {
     //Optional<List<PushRequests>> findByUsername (MainUser user);
     Optional<List<PushRequests>> findByGroupId (Groups user);
 
+    Optional<PushRequests> findByGroupIdAndName (Groups user,String name);
+
 
     @Modifying
     @Transactional

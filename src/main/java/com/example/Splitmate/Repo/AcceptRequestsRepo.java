@@ -3,7 +3,6 @@ package com.example.Splitmate.Repo;
 import com.example.Splitmate.Classbodies.AllUserDto;
 import com.example.Splitmate.Entity.AcceptRequests;
 import com.example.Splitmate.Entity.Groups;
-import com.example.Splitmate.Entity.MainUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +14,11 @@ import java.util.Optional;
 @Repository
 public interface AcceptRequestsRepo extends JpaRepository<AcceptRequests,Long> {
     boolean existsByGroupIdAndName(Groups user, String name);
+
+
+
+//    @Query(value = "select a.name from accept_requests a where a.Id= :id",nativeQuery = true)
+//    String findName(long id);
 
     @Query(value="Select * from accept_requests a where a.username= :name",nativeQuery = true)
     Optional<List<AcceptRequests>> findByUsername(@Param("name") String name);
@@ -39,5 +43,7 @@ public interface AcceptRequestsRepo extends JpaRepository<AcceptRequests,Long> {
             "WHERE u.groupId.id = :groupId")
     List<AllUserDto> findUsersByGroupId(@Param("groupId") String groupId);
 
+    @Query(value = "select a.name from accept_requests a where a.group_id= :id",nativeQuery = true)
+    Optional<List<String>> findAllById(@Param("id") long id);
 
 }

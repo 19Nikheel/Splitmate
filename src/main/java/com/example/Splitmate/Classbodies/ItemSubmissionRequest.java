@@ -6,6 +6,16 @@ import java.util.List;
 
 @Data
 public class ItemSubmissionRequest {
-    private Double paid;
-    private List<ItemDTO> items;
+
+
+        private String description;
+        private String groupId;
+        private double totalMoney;
+        private double tax;
+        private List<ItemPayerDTO> payers;
+        private List<ItemDTO> items;
+
+        // Getters and setters
+
+
 }

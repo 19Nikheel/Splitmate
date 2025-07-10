@@ -4,14 +4,12 @@ import com.example.Splitmate.Entity.AcceptRequests;
 import com.example.Splitmate.Entity.Groups;
 import com.example.Splitmate.Entity.MainUser;
 import com.example.Splitmate.Entity.PushRequests;
-import com.example.Splitmate.Repo.AcceptRequestsRepo;
-import com.example.Splitmate.Repo.GroupRepo;
-import com.example.Splitmate.Repo.MainuserRepo;
-import com.example.Splitmate.Repo.PushRequestRepo;
+import com.example.Splitmate.Repo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +32,9 @@ public class RequestController {
 
     @Autowired
     private GroupRepo groupRepo;
+
+    @Autowired
+    private Admin_GRepo adminGRepo;
 
 
 
@@ -79,25 +80,53 @@ public class RequestController {
     @Transactional
     public ResponseEntity<String> cnf_request(@RequestParam ("groupId") String gid ,@RequestParam ("name") String name){
 
-        AcceptRequests ar=new AcceptRequests();
-        Optional<MainUser> byUsername = mur.findByUsername(name);
-        Optional<Groups> byGroupId = groupRepo.findByGroupId(gid);
 
+        String admin = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        AcceptRequests ar=new AcceptRequests();
+
+        Optional<Groups> byGroupId = groupRepo.findByGroupId(gid);
         if(byGroupId.isEmpty() ) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
         }
+        if(!adminGRepo.existsByGidAndUsername(byGroupId.get().getId(),admin)){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
+        }
+        Optional<MainUser> byUsername = mur.findByUsername(name);
+
+
+        Optional<PushRequests> pushRequests = requestRepo.findByGroupIdAndName(byGroupId.get(), name);
+        if(pushRequests.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+        int p=0;
+        int o=1;
+        while(p==0) {
+
+            if (art.existsByGroupIdAndName(byGroupId.get(), name)) {
+                name = name +o;
+                o++;
+
+            }else{
+                p=1;
+                break;
+            }
+
+        }
         ar.setGroupId(byGroupId.get());
-        ar.setUserId(name+"+"+gid);
+
 
         if(byUsername.isPresent()){
-            ar.setName(byUsername.get().getName());    ///  Conflict point when member vs guest name clash
+            ar.setUserId(pushRequests.get().getUserId());
             ar.setRole("MEMBER");
             ar.setTokenID(-1);
         }else{
-            ar.setName(name);
+            ar.setUserId(name+"+"+gid);
             ar.setRole("GUEST");
             ar.setTokenID(1);
+
         }
+        ar.setName(name);
 
         ar.setCheck(true);
         try {
@@ -109,7 +138,6 @@ public class RequestController {
         }catch(DataIntegrityViolationException  e ){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name is already available");
         }catch (Exception e){
-            System.out.println(e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Error in delete request");
         }
 

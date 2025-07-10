@@ -31,6 +31,6 @@ public class Consumer {
     private int quantity;
 
     @Column(name="Shared")
-    private boolean isShared;
+    private int isShared;
 
 }

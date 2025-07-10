@@ -8,6 +8,7 @@ import com.example.Splitmate.Classbodies.userExpenses;
 import com.example.Splitmate.Entity.*;
 import com.example.Splitmate.Repo.*;
 import com.example.Splitmate.Services.Addingservices;
+import com.example.Splitmate.Services.BalanceSheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,47 +42,36 @@ public class Controller {
     @Autowired
     private GroupRepo gRepo;
 
-//    @PostMapping("/post")
-//    public ResponseEntity<String> addpost(@RequestBody ItemSubmissionRequest ISR){
-//        try{
-//
-//            services.postData(ISR);
-//            return ResponseEntity.ok("Data added successful");
-//        }catch(RuntimeException e){
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Username not found");
-//        }
-//
-//    }
 
-//    @GetMapping("/findall")
-//    public ResponseEntity<?> getAllDataInRaw(){
-//
-//        String username=SecurityContextHolder.getContext().getAuthentication().getName();
-//
-//        username=username.substring(username.indexOf("+")+1);
-//
-//        Optional<List<AcceptRequests>> all = acceptRepo.findByUsername(username);
-//        if(all.isPresent() && all.get().size()==0){
-//            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
-//        }
-//        return  ResponseEntity.ok(all.get());
-//    }
+
+
+    @PostMapping("/post")
+    public ResponseEntity<String> addpost(@RequestBody ItemSubmissionRequest ISR){
+        try{
+            services.postData(ISR);
+
+            return ResponseEntity.ok("Data added successful");
+        }catch(RuntimeException e){
+            System.out.println(e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Username not found");
+        }
+
+    }
 
     @GetMapping("/findalluser/{gid}")
-    public ResponseEntity<?> getAllUser(@PathVariable String gid){
-        List<AllUserDto> usersByGroupId = acceptRepo.findUsersByGroupId(gid);
-        System.out.println(usersByGroupId);
+    public ResponseEntity<?> getAllDataInRaw(@PathVariable ("gid") String gid){
 
-//
-//        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//
-//        Optional<List<String>> all = acceptRepo.findAllUser(username);
-//        if(all.get().size()==0){
-//            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
-//        }
+        Groups g1 = gRepo.findByGroupId(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
 
-        return  ResponseEntity.ok(usersByGroupId);
+        Optional<List<String>> allById = acceptRepo.findAllById(g1.getId());
+
+        if(allById.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
+        }
+        return  ResponseEntity.ok(allById.get());
     }
+
+
 
 //    @GetMapping("/findeach")
 //    public ResponseEntity<?> getEachUserExpenses(@RequestParam("name") String name){
@@ -130,7 +120,7 @@ public class Controller {
     }
 
     //@Transactional
-    @GetMapping("/group")
+    @PostMapping("/group")
     public ResponseEntity<?> createGroup(@RequestParam("groupName") String gname , Principal principal){
 
         String userid=principal.getName();
@@ -159,7 +149,7 @@ public class Controller {
         acceptRepo.save(apt);
 
 
-        return ResponseEntity.ok("successfully created"+ save1.getGroupId());
+        return ResponseEntity.ok("successfully created "+ save1.getGroupId());
     }
 
 

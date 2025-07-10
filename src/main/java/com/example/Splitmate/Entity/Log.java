@@ -19,6 +19,9 @@ public class Log {
     @Column(name = "Amount")
     private double totalAmount;
 
+    @Column(name = "Description")
+    private String Description;
+
     @Column(name = "Time")
     private String time;
 

@@ -1,5 +1,6 @@
 package com.example.Splitmate.Services;
 
+import com.example.Splitmate.Classbodies.ConsumerDTO;
 import com.example.Splitmate.Classbodies.ItemDTO;
 import com.example.Splitmate.Classbodies.ItemPayerDTO;
 import com.example.Splitmate.Classbodies.ItemSubmissionRequest;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -24,57 +26,80 @@ public class Addingservices {
 
     @Autowired
     private AcceptRequestsRepo Arp;
+
+    @Autowired
+    private GroupRepo grp;
     
     @Autowired
     private ItemTableRepo itemTableRepo;
 
+    @Autowired
+    private LogRepo logRepo;
 
-    
- 
+    @Autowired
+    private ItemPriceLogRepo iplRepo;
 
-//    @Autowired
-//    public Addingservices(MainuserRepo mainuserRepo, AllreceiptRepo allreceiptRepo,AcceptRequestsRepo Arp) {
-//        this.mainuserRepo = mainuserRepo;
-//        this.allreceiptRepo = allreceiptRepo;
-//        this.Arp=Arp;
-//    }
+    @Autowired
+    private ConsumerRepo consumerRepo;
+
+    @Autowired
+    private TransactionRepo transactionRepo;
+
+    @Autowired
+    private BalanceSheetService bcSheet;
 
 
-//    @Transactional
-//    public void postData(ItemSubmissionRequest ISR){
-//
-//
-//        List<ItemDTO> items = ISR.getItems();
-//
-//       for(ItemDTO i:items){
-//           ItemTable t1=new ItemTable();
-//           t1.setItem_name(i.getName());
-//           t1.setPrice(i.getUnitPrice());
-//
-//           t1.setUserid(Arp.findById(i.getOwnerId()).get());
-//           ItemTable save = itemTableRepo.save(t1);
-//
-//           List<Long> consumers = i.getConsumers();
-//           for(Long p: consumers){
-//               ItemConsumer ic=new ItemConsumer();
-//               ic.setConsumer(Arp.findById(p).get());
-//               ic.setItem(save);
-//               itemConRepo.save(ic);
-//           }
-//
-//           List<ItemPayerDTO> payers = i.getPayers();
-//           for(ItemPayerDTO p:payers){
-//               Itempayer y1=new Itempayer();
-//               y1.setItem(save);
-//               y1.setAmount(p.getAmount());
-//               y1.setPayer(Arp.findById(p.getUserId()).get());
-//               itemPayRepo.save(y1);
-//           }
-//
-//
-//       }
-//
-//    }
+    @Transactional
+    public void postData(ItemSubmissionRequest ISR){
+
+        Log newLog=new Log();
+        newLog.setTotalAmount(ISR.getTotalMoney());
+        newLog.setDescription(ISR.getDescription());
+        newLog.setTime(new Date().toString());
+        String str=(ISR.getPayers().size()==1) ? "Full" : "Partial";
+        newLog.setMode(str);
+        Groups groupidId = grp.findByGroupId(ISR.getGroupId()).orElseThrow(() -> new RuntimeException("Groupid is wrong"));
+        newLog.setGroupId(groupidId);
+        Log logSave = logRepo.save(newLog);
+
+        List<ItemDTO> items = ISR.getItems();
+        List<ItemPayerDTO> payers = ISR.getPayers();
+
+
+       for(ItemDTO i:items){
+           ItemTable it=new ItemTable();
+           it.setItem_name(i.getItemName());
+           ItemTable itemSave = itemTableRepo.save(it);
+
+           ItemPriceLog ipl=new ItemPriceLog();
+           ipl.setItemId(itemSave);
+           ipl.setLogId(logSave);
+           ipl.setUnitPrice(i.getUnitPrice());
+           ItemPriceLog saveipl = iplRepo.save(ipl);
+
+           for(ConsumerDTO j: i.getConsumers()){
+               Consumer con=new Consumer();
+               AcceptRequests byGroupIdAndName = Arp.findByGroupIdAndName(groupidId, j.getName()).orElseThrow(()-> new RuntimeException("invalid user"));
+               con.setUserId(byGroupIdAndName);
+               con.setIsShared(j.getIsShared());
+               con.setQuantity(j.getQuantity());
+               con.setItemId(saveipl);
+               consumerRepo.save(con);
+           }
+       }
+
+       for(ItemPayerDTO i: ISR.getPayers()){
+           Transaction transaction=new Transaction();
+           transaction.setLogId(logSave);
+           AcceptRequests byGroupIdAndName = Arp.findByGroupIdAndName(groupidId, i.getName()).orElseThrow(()-> new RuntimeException("invalid user"));
+           transaction.setPayerId(byGroupIdAndName);
+           transaction.setAmount(i.getAmount());
+           transactionRepo.save(transaction);
+       }
+
+
+        bcSheet.updateBalancesFromExpense(ISR,groupidId);
+    }
 
 
     int attempts = 0;
@@ -99,9 +124,7 @@ public class Addingservices {
         return uniqueId;
     }
 
-//    public  String Calculate(){
-//
-//    }
+
 
 
 
