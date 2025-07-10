@@ -53,7 +53,8 @@ Splitmate v5 delivers significant security upgrades, optimized balance sheet cal
 
 
 
-✨ Summary of Updates
+✨ Summary of Updates 
+Splitmate – Version 4.0 Changelog
 🔒 Backend (Spring Boot)
 Implemented JWT token enhancements
 
