@@ -20,6 +20,7 @@ public class Transaction {
 
     @ManyToOne
     @JsonIgnore
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name="log_id" ,referencedColumnName = "LogId")
     private Log logId;
 

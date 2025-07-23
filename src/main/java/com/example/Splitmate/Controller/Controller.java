@@ -1,13 +1,12 @@
 package com.example.Splitmate.Controller;
 
 
-import com.example.Splitmate.Classbodies.AllUserDto;
-import com.example.Splitmate.Classbodies.ItemSubmissionRequest;
-import com.example.Splitmate.Classbodies.WebResponce;
-import com.example.Splitmate.Classbodies.userExpenses;
+import com.example.Splitmate.Classbodies.*;
 import com.example.Splitmate.Entity.*;
 import com.example.Splitmate.Repo.*;
+import com.example.Splitmate.ServiceBody.Transaction;
 import com.example.Splitmate.Services.Addingservices;
+import com.example.Splitmate.Services.AdminServices;
 import com.example.Splitmate.Services.BalanceSheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,11 +36,19 @@ public class Controller {
     private MainuserRepo mur;
 
     @Autowired
+    private LogRepo logRepo;
+
+    @Autowired
     private AcceptRequestsRepo acceptRepo;
 
     @Autowired
     private GroupRepo gRepo;
 
+    @Autowired
+    private BalanceSheetService bss;
+
+    @Autowired
+    private AdminServices adminServices;
 
 
 
@@ -59,11 +66,11 @@ public class Controller {
     }
 
     @GetMapping("/findalluser/{gid}")
-    public ResponseEntity<?> getAllDataInRaw(@PathVariable ("gid") String gid){
+    public ResponseEntity<?> getAllDataInRaw(@PathVariable ("gid") long gid){
 
-        Groups g1 = gRepo.findByGroupId(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
+        Groups g1 = gRepo.findById(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
 
-        Optional<List<String>> allById = acceptRepo.findAllById(g1.getId());
+        Optional<List<UserInfo>> allById = acceptRepo.findAllById(g1);
 
         if(allById.isEmpty()){
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
@@ -71,36 +78,38 @@ public class Controller {
         return  ResponseEntity.ok(allById.get());
     }
 
+    @GetMapping("/findsettlement/{gid}")
+    public ResponseEntity<?> getSettlement(@PathVariable ("gid") long gid){
 
+        Groups g1 = gRepo.findById(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
 
-//    @GetMapping("/findeach")
-//    public ResponseEntity<?> getEachUserExpenses(@RequestParam("name") String name){
-//        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-//        System.out.println("pop");
-//        System.out.println(username+" "+name);
-//        List<userExpenses> all = allreceiptRepo.findUserExpenses(username,name.toUpperCase());
-//        if(all.size()==0){
+        List<Transaction> groupSimplifiedSettlements = bss.getGroupSimplifiedSettlements(g1);
+
+//        Optional<List<String>> allById = acceptRepo.findAllById(g1.getId());
+//
+//        if(allById.isEmpty()){
 //            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
 //        }
-//
-//        return  ResponseEntity.ok(all);
-//    }
+        return  ResponseEntity.ok(groupSimplifiedSettlements);
+    }
 
-//    @GetMapping("/findsum")
-//    public ResponseEntity<?> gettotalspend(){
-//
-//        double all = allreceiptRepo.findTotalSpend();
-//        if(all==0.0){
-//            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
-//        }
-//
-//        return  ResponseEntity.ok(all);
-//    }
+
+
+    @GetMapping("/findeach")
+    public ResponseEntity<?> getEachUserExpenses(@RequestParam("groupId") long groupId,@RequestParam("name") String name){
+        Groups g1 = gRepo.findById(groupId).orElseThrow(() -> new RuntimeException("Group not exist"));
+        AcceptRequests found = acceptRepo.findByGroupIdAndName(g1, name).orElseThrow(() -> new RuntimeException("User not found"));
+
+
+        return  ResponseEntity.ok(bss.getGroupTotalBalance(found,g1));
+    }
+
+
 
     @GetMapping("/findRequestList/{groupId}")
-    public ResponseEntity<?> getRequestList(@PathVariable ("groupId") String groupId){
+    public ResponseEntity<?> getRequestList(@PathVariable ("groupId") long groupId){
         Optional<List<PushRequests>> byUsername;
-        Optional<Groups> byGroupId = groupRepo.findByGroupId(groupId);
+        Optional<Groups> byGroupId = groupRepo.findById(groupId);
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
 
         if( byGroupId.isPresent() ){
@@ -152,5 +161,89 @@ public class Controller {
         return ResponseEntity.ok("successfully created "+ save1.getGroupId());
     }
 
+    @GetMapping("/findgroupname/{groupId}")
+    public ResponseEntity<?> getGroupName(@PathVariable ("groupId") long groupId){
+        Optional<Groups> byGroupId = groupRepo.findById(groupId);
+
+        if( byGroupId.isPresent() ){
+            return ResponseEntity.ok().body(byGroupId.get().getName());
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Group Not Found");
+        }
+    }
+
+    @DeleteMapping("/delete/{logid}")
+    public ResponseEntity<?> deleteLogId(@PathVariable ("logid") long logid){
+        Optional<Log> byId = logRepo.findById(logid);
+        byId.get().setDeleted(true);
+
+        if(byId.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("log id not found");
+
+        }
+        try{
+            services.deleteLog(byId.get());
+            logRepo.save(byId.get());
+        }catch(Exception e){
+            System.out.println(e);      // remind me change
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Deletion Unsuccessful");
+         }
+        return ResponseEntity.ok().body("Deleted Successfully ");
+    }
+
+    @GetMapping("/findtotal/{gid}")
+    public ResponseEntity<?> getTotal(@PathVariable ("gid") long gid){
+        Optional<Groups> byGroupId = groupRepo.findById(gid);
+
+        if( byGroupId.isPresent() ){
+            Double sum = logRepo.findSum(byGroupId.get());
+            sum = (sum==null)?0.0 : sum;
+            return ResponseEntity.ok().body(sum);
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Group Not Found");
+        }
+    }
+
+    @GetMapping("/findmygroups")
+    public ResponseEntity<?> findMyGroups(){
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        try{
+            List<GroupDetailsDTO> groupDetailsDTOS = adminServices.myGroup(name);
+            return ResponseEntity.ok(groupDetailsDTOS);
+        }catch (Exception e){
+            System.out.println(e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
+        }
+
+
+    }
+
+    @GetMapping("/findothergroups")
+    public ResponseEntity<?> findotherGroups(){
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        try{
+            List<GroupDetailsDTO> groupDetailsDTOS = adminServices.otherGroup(name);
+            return ResponseEntity.ok(groupDetailsDTOS);
+        }catch (Exception e){
+            System.out.println(e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
+        }
+
+
+    }
+
+    @GetMapping("/findlog/{gid}")
+    public ResponseEntity<?> getLog(@PathVariable ("gid") long gid){
+        Optional<Groups> byGroupId = groupRepo.findById(gid);
+
+        if( byGroupId.isPresent() ){
+            List<WebResponce> gLog = services.getGLog(byGroupId.get());
+            return ResponseEntity.ok().body(gLog);
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("log Not Found");
+        }
+    }
 
 }

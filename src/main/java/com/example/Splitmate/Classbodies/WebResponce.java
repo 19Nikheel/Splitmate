@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Setter
 @Getter
 @NoArgsConstructor
@@ -14,8 +16,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WebResponce {
-    private String name;
-    private  String item;
+    private Long id;
+    private List<String> paidBy;
+    private List<String> items;
+    private List<String> participants;
+    private String time;
     private double amount;
-    private  String username;
 }

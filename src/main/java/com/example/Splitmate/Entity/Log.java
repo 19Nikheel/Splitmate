@@ -28,8 +28,14 @@ public class Log {
     @Column(name = "Mode")
     private String mode;
 
+    @Column(name = "Tax")
+    private Double tax;
+
+    @Column(name = "Deleted")
+    private boolean deleted;
+
     @ManyToOne
     @JsonIgnore
     @JoinColumn(name="GroupId" ,referencedColumnName = "Id")
-    private Groups GroupId;
+    private Groups groupId;
 }

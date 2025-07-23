@@ -39,12 +39,14 @@ public class BalanceSheetService {
      * Updates balances when an expense is added or updated.
      */
     @Transactional
-    public void updateBalancesFromExpense(ItemSubmissionRequest expenseJson, Groups groupEntity) {
-        // Step 1: Build consumer total share map
+    public void updateBalancesFromExpense(ItemSubmissionRequest expenseJson, Groups groupEntity,boolean n) {
+        //  Build consumer total share map
         Map<AcceptRequests, Double> consumerShare = new HashMap<>();
-
+        int a=(n)?1:-1;
         for (ItemDTO item : expenseJson.getItems()) {
-            double unitPrice = item.getUnitPrice();
+
+            double unitPrice =  a*item.getUnitPrice();
+
 
             for (ConsumerDTO consumer : item.getConsumers()) {
                 AcceptRequests consumerUser = ArtRepo.findByGroupIdAndName(groupEntity,consumer.getName()).get();
@@ -62,16 +64,16 @@ public class BalanceSheetService {
             }
         }
 
-        // Step 2: Distribute tax evenly among consumers
+        //Distribute tax evenly among consumers
         double tax = expenseJson.getTax();
         int totalConsumers = consumerShare.size();
         double taxPerConsumer = totalConsumers > 0 ? tax / totalConsumers : 0;
 
         for (Map.Entry<AcceptRequests, Double> entry : consumerShare.entrySet()) {
-            consumerShare.put(entry.getKey(), entry.getValue() + taxPerConsumer);
+            consumerShare.put(entry.getKey(), entry.getValue() + (a*taxPerConsumer));
         }
 
-        // Step 3: Build payer paid map
+        //  Build payer paid map
         Map<AcceptRequests, Double> payerPaid = new HashMap<>();
         for (ItemPayerDTO payer : expenseJson.getPayers()) {
 
@@ -82,7 +84,7 @@ public class BalanceSheetService {
 
         double totalMoney = expenseJson.getTotalMoney();
 
-        // Step 4: Update or insert balances
+        //  Update or insert balances
         for (Map.Entry<AcceptRequests, Double> entry : consumerShare.entrySet()) {
             AcceptRequests consumer = entry.getKey();
             double shareAmount = entry.getValue();

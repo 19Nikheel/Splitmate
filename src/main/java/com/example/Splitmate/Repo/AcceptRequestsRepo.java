@@ -1,6 +1,7 @@
 package com.example.Splitmate.Repo;
 
 import com.example.Splitmate.Classbodies.AllUserDto;
+import com.example.Splitmate.Classbodies.UserInfo;
 import com.example.Splitmate.Entity.AcceptRequests;
 import com.example.Splitmate.Entity.Groups;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,7 +44,17 @@ public interface AcceptRequestsRepo extends JpaRepository<AcceptRequests,Long> {
             "WHERE u.groupId.id = :groupId")
     List<AllUserDto> findUsersByGroupId(@Param("groupId") String groupId);
 
+    @Query("select new com.example.Splitmate.Classbodies.UserInfo(a.Id,a.name,a.avatar) from AcceptRequests a where a.groupId= :id")
+    Optional<List<UserInfo>> findAllById(@Param("id") Groups id);
+
     @Query(value = "select a.name from accept_requests a where a.group_id= :id",nativeQuery = true)
-    Optional<List<String>> findAllById(@Param("id") long id);
+    Optional<List<String>> findAllUserById(@Param("id") long id);
+
+//    @Query(value="select a.groupId from accept_requests a where a.userId= :userId")
+//    List<Groups> findGroupId (@Param("userId") String userId);
+
+    @Query("SELECT a.groupId FROM AcceptRequests a WHERE a.userId = :userId")
+    List<Groups> findGroupsByUserId(@Param("userId") String userId);
+
 
 }

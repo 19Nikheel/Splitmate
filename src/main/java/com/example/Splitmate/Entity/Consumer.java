@@ -24,6 +24,7 @@ public class Consumer {
 
     @ManyToOne
     @JsonIgnore
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name="item_id" ,referencedColumnName = "Id")
     private ItemPriceLog itemId;
 

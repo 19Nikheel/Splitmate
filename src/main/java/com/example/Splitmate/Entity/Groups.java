@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Entity
 @Data
@@ -28,6 +29,7 @@ public class Groups {
 
     @PrePersist
     public void prePersist() {
-        this.createTime = LocalDateTime.now().toString(); // Set current timestamp
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        this.createTime = LocalDateTime.now().format(formatter); // Set current timestamp
     }
 }

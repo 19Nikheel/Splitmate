@@ -1,9 +1,6 @@
 package com.example.Splitmate.Services;
 
-import com.example.Splitmate.Classbodies.ConsumerDTO;
-import com.example.Splitmate.Classbodies.ItemDTO;
-import com.example.Splitmate.Classbodies.ItemPayerDTO;
-import com.example.Splitmate.Classbodies.ItemSubmissionRequest;
+import com.example.Splitmate.Classbodies.*;
 import com.example.Splitmate.Entity.*;
 import com.example.Splitmate.Repo.*;
 import jakarta.transaction.Transactional;
@@ -11,10 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class Addingservices {
@@ -48,6 +42,8 @@ public class Addingservices {
     @Autowired
     private BalanceSheetService bcSheet;
 
+    @Autowired
+    private ItemPriceLogRepo itemPriceLogRepo;
 
     @Transactional
     public void postData(ItemSubmissionRequest ISR){
@@ -56,6 +52,8 @@ public class Addingservices {
         newLog.setTotalAmount(ISR.getTotalMoney());
         newLog.setDescription(ISR.getDescription());
         newLog.setTime(new Date().toString());
+        newLog.setTax(ISR.getTax());
+        newLog.setDeleted(false);
         String str=(ISR.getPayers().size()==1) ? "Full" : "Partial";
         newLog.setMode(str);
         Groups groupidId = grp.findByGroupId(ISR.getGroupId()).orElseThrow(() -> new RuntimeException("Groupid is wrong"));
@@ -98,9 +96,73 @@ public class Addingservices {
        }
 
 
-        bcSheet.updateBalancesFromExpense(ISR,groupidId);
+        bcSheet.updateBalancesFromExpense(ISR,groupidId,true);
     }
 
+    @Transactional
+    public  void deleteLog(Log log){
+        log.setDeleted(true);
+        Groups groupId = log.getGroupId();
+        ItemSubmissionRequest ist=new ItemSubmissionRequest();
+        ist.setTax(log.getTax());
+        ist.setTotalMoney(log.getTotalAmount());
+
+        List<ItemPayerDTO> ipd=new ArrayList<>();
+        List<Transaction> byLogId = transactionRepo.findByLogId(log);
+
+        for(Transaction lp : byLogId){
+            ItemPayerDTO ip=new ItemPayerDTO();
+            ip.setName(lp.getPayerId().getName());
+            ip.setAmount(lp.getAmount());
+            ipd.add(ip);
+        }
+
+        List<ItemDTO> itemDTOS=new ArrayList<>();
+        List<ItemPriceLog> byLogId1 = iplRepo.findByLogId(log);
+
+        for(ItemPriceLog it: byLogId1){
+            ItemDTO itd=new ItemDTO();
+            itd.setUnitPrice(it.getUnitPrice());
+
+            List<ConsumerDTO> cDtos =new ArrayList<>();
+
+
+            List<Consumer> byItemId = consumerRepo.findByItemId(it);
+
+            for(Consumer cons: byItemId ){
+                ConsumerDTO con =new ConsumerDTO();
+                con.setName(cons.getUserId().getName());
+                con.setQuantity(cons.getQuantity());
+                con.setIsShared(cons.getIsShared());
+                cDtos.add(con);
+            }
+            itd.setConsumers(cDtos);
+
+
+        }
+        ist.setPayers(ipd);
+        ist.setItems(itemDTOS);
+
+        bcSheet.updateBalancesFromExpense(ist,groupId,false);
+    }
+
+
+    public List<WebResponce> getGLog(Groups g){
+        List<Log> byGroupId = logRepo.findByGroupId(g);
+        List<WebResponce> res=new ArrayList<>();
+        for(Log i:byGroupId){
+            WebResponce wr=new WebResponce();
+            wr.setAmount(i.getTotalAmount());
+            wr.setId(i.getLogId());
+            wr.setPaidBy(transactionRepo.findByLog(i));
+            wr.setTime(i.getTime());
+            wr.setItems(itemPriceLogRepo.findItemNamesByLogId(i));
+            wr.setParticipants(consumerRepo.findNamesByLogId(i));
+            res.add(wr);
+        }
+        return res;
+
+    }
 
     int attempts = 0;
     int maxAttempts = 100;
