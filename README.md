@@ -1,5 +1,60 @@
 # 📝 Splitmate Project – Recent Changes
-✨ Summary of Updates
+📝 Splitmate – Version 5.0 Changelog
+🚀 New Features and Enhancements
+✅ Security Improvements
+
+Introduced password protection for groups to restrict unauthorized access.
+
+Added join request approval system:
+
+Users now send a request to join a group.
+
+Group admins can accept or reject requests for enhanced security.
+
+✅ One-Time Login Feature
+
+Implemented 1-time login tokens for improved security:
+
+Prevents multiple entries using compromised user IDs and passwords.
+
+✅ Balance Sheet Algorithm
+
+Integrated greedy algorithm for debt settlement:
+
+Calculates minimum number of transactions required.
+
+Efficiently determines who owes whom, optimizing settlements among group members.
+
+✅ Database Enhancements
+
+Redesigned Balance table to store composite keys for user pairs with proper relational mapping.
+
+Introduced DTO structures for simplified data conversions between frontend and backend.
+
+✅ Tax Distribution Feature
+
+Added logic to distribute leftover tax amounts evenly among all consumers when calculating balances.
+
+✅ Version Control and Codebase
+
+Switched to structured branching strategy using Git and GitHub for better version management.
+
+Resolved merge conflicts and ensured consistent database schema updates.
+
+🔧 Technical Stack Updates
+Frontend: Continued development using VS Code.
+
+Backend: Enhanced logic and security layers using IntelliJ IDEA.
+
+Version Control: Implemented strict Git workflows for collaborative stability.
+
+📌 Summary
+Splitmate v5 delivers significant security upgrades, optimized balance sheet calculations, and database integrity improvements, setting a strong foundation for scalable future features
+
+
+
+✨ Summary of Updates 
+Splitmate – Version 4.0 Changelog
 🔒 Backend (Spring Boot)
 Implemented JWT token enhancements
 
