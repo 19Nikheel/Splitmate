@@ -47,6 +47,28 @@ public class CustomUserDetailService implements UserDetailsService {
                     .roles(usere.getRole())
                     .tokenId(usere.getTokenID())
                     .build();
+        }else if(username.startsWith("R#%0)")){
+
+            username=username.substring(5);
+            Optional<MainUser> byUsername = userRepo.findByUsername(username);
+
+            if(byUsername.isPresent()){
+                MainUser user =byUsername.get();
+                String encodedPassword = pse.encode(user.getContactNo());
+
+                return CustomUserDetails
+                        .withUsername(user.getUsername())
+                        .password(encodedPassword)
+                        .roles(user.getRole())
+                        .tokenId(-1)
+                        .build();
+            }else{
+                throw new UsernameNotFoundException("User not found");
+            }
+
+
+
+
         }else{
             Optional<MainUser> byUsername = userRepo.findByUsername(username);
             if(byUsername.isPresent()){

@@ -10,7 +10,4 @@ import java.util.List;
 @NoArgsConstructor
 public class Reportbody {
     private String name;
-
-
-
 }

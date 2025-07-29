@@ -10,6 +10,7 @@ import com.example.Splitmate.Repo.Admin_GRepo;
 import com.example.Splitmate.Repo.GroupRepo;
 import com.example.Splitmate.Repo.MainuserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,6 +29,9 @@ public class AdminServices {
 
     @Autowired
     private MainuserRepo mainuserRepo;
+
+    @Autowired
+    private PasswordEncoder pse;
     @Autowired
     private GroupRepo grp;
     public List<GroupDetailsDTO> myGroup(String name){
@@ -62,6 +66,12 @@ public class AdminServices {
         }
 
         return gdl;
+    }
+
+    public void change(String user,String pass){
+        Optional<MainUser> byUsername = mainuserRepo.findByUsername(user);
+        byUsername.get().setPassword(pse.encode(pass));
+        mainuserRepo.save(byUsername.get());
     }
 
 

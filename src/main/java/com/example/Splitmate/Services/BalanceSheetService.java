@@ -7,16 +7,16 @@ import com.example.Splitmate.Classbodies.ItemSubmissionRequest;
 import com.example.Splitmate.Entity.AcceptRequests;
 import com.example.Splitmate.Entity.Balance;
 import com.example.Splitmate.Entity.Groups;
-import com.example.Splitmate.Repo.AcceptRequestsRepo;
-import com.example.Splitmate.Repo.BalanceRepository;
-import com.example.Splitmate.Repo.GroupRepo;
-import com.example.Splitmate.Repo.LogRepo;
-import com.example.Splitmate.ServiceBody.Transaction;
+import com.example.Splitmate.Repo.*;
+import com.example.Splitmate.Entity.Settlement;
+import com.example.Splitmate.ServiceBody.SettlementId;
 import com.example.Splitmate.ServiceBody.UserPair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Service
@@ -35,6 +35,9 @@ public class BalanceSheetService {
     private ListToMap lToM ;
     @Autowired
     private AcceptRequestsRepo ArtRepo;
+
+    @Autowired
+    private SettlementRepository settlementRepository;
     /**
      * Updates balances when an expense is added or updated.
      */
@@ -124,14 +127,44 @@ public class BalanceSheetService {
     }
 
 
-    public List<Transaction> getGroupSimplifiedSettlements(Groups groupId) {
+    public void getGroupSimplifiedSettlements(Groups groupId) {
         Optional<List<Balance>> byGroupId = balanceRepository.findByGroupId(groupId);
 
         if(byGroupId.isEmpty()){
             throw new RuntimeException("invalid Group id");
         }
-        return  calculateSettlements(lToM.convertToMap(byGroupId.get()));
+
+        updateAmounts(calculateSettlements(lToM.convertToMap(byGroupId.get()), groupId));
+
+
     }
+
+    @Transactional
+    public void updateAmounts(List<Settlement> updates) {
+        for (Settlement update : updates) {
+            SettlementId id = new SettlementId(
+                    update.getFrom().getId(),
+                    update.getTo().getId(),
+                    update.getGroups().getId()
+            );
+
+            // Check if record exists
+            if (settlementRepository.existsById(id)) {
+                // Update existing record
+                settlementRepository.updateAmount(
+                        update.getFrom().getId(),
+                        update.getTo().getId(),
+                        update.getGroups().getId(),
+                        update.getAmount()
+                );
+            } else {
+                // Save new record
+                settlementRepository.save(update);
+            }
+        }
+    }
+
+
 
 
     public double getGroupTotalBalance(AcceptRequests user, Groups groupId) {
@@ -260,13 +293,17 @@ public class BalanceSheetService {
      - @param balanceMap The map of balances between user pairs
      - @return List of transactions to settle all debts
      */
-    public List<Transaction> calculateSettlements(Map<UserPair, Double> balanceMap) {
+    public List<Settlement> calculateSettlements(Map<UserPair, Double> balanceMap,Groups g) {
         // Step 1: Calculate net balances for each user
+        System.out.println(balanceMap);
         Map<AcceptRequests, Double> netBalances = new HashMap<>();
 
         for (Map.Entry<UserPair, Double> entry : balanceMap.entrySet()) {
             UserPair pair = entry.getKey();
-            double amount = entry.getValue();
+           // double amount = entry.getValue();
+            double amount = BigDecimal.valueOf(entry.getValue())
+                    .setScale(3, RoundingMode.HALF_UP)
+                    .doubleValue();
 
             AcceptRequests debtor = ArtRepo.findById(pair.getUser1Id()).get();
             AcceptRequests creditor = ArtRepo.findById(pair.getUser2Id()).get();
@@ -280,7 +317,7 @@ public class BalanceSheetService {
         List<Map.Entry<AcceptRequests, Double>> creditors = new ArrayList<>();
 
         for (Map.Entry<AcceptRequests, Double> entry : netBalances.entrySet()) {
-            if (Math.abs(entry.getValue()) < 0.001) continue; // Skip users with zero balance
+            //if (Math.abs(entry.getValue()) < 0.001) continue; // Skip users with zero balance
 
             if (entry.getValue() < 0) debtors.add(entry);
             else creditors.add(entry);
@@ -297,7 +334,7 @@ public class BalanceSheetService {
         creditors.sort((a, b) -> Double.compare(Math.abs(b.getValue()), Math.abs(a.getValue())));
 
         // Step 3: Match debtors and creditors to create transactions
-        List<Transaction> transactions = new ArrayList<>();
+        List<Settlement> settlements = new ArrayList<>();
         int debtorIndex = 0;
         int creditorIndex = 0;
 
@@ -312,7 +349,7 @@ public class BalanceSheetService {
             double transferAmount = Math.min(Math.abs(debtorBalance), creditorBalance);
 
             if (transferAmount > 0.001) { // Only create transactions for significant amounts
-                transactions.add(new Transaction(debtor.getKey(), creditor.getKey(), transferAmount));
+                settlements.add(new Settlement(debtor.getKey(), creditor.getKey(),g, transferAmount));
             }
 
             // Update balances after the transaction
@@ -328,7 +365,7 @@ public class BalanceSheetService {
             }
         }
 
-        return transactions;
+        return settlements;
     }
 
 

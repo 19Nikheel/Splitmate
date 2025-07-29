@@ -13,6 +13,7 @@ import com.example.Splitmate.Repo.MainuserRepo;
 
 import com.example.Splitmate.Security.JwtHelper;
 import com.example.Splitmate.Services.Addingservices;
+import com.sun.net.httpserver.Authenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,23 +126,6 @@ public class SecurityController {
         return new ResponseEntity<>(responce,HttpStatus.OK);
     }
 
-//    @PostMapping("/guest-login")
-//    private ResponseEntity<JwtResponce> guestLogin(@RequestBody Request jwtRequest){
-//        this.doAuthenticate(jwtRequest.getUserName(),jwtRequest.getPassword());
-//        UserDetails userDetails=userDetailsService.loadUserByUsername(jwtRequest.getUserName());
-//
-//        String token=this.jwtHelper.generateToken(userDetails,userrepo.findByUsername(jwtRequest.getUserName()).get().getForTime());
-//        JwtResponce responce=JwtResponce.builder().Jwttoken(token).username(userDetails.getUsername()).build();
-//        MainUser mainUser = userrepo.findByUsername(userDetails.getUsername()).get();
-////        AcceptRequests ar=new AcceptRequests();
-////        ar.setNameId(mainUser.getName());
-////        ar.setRole("Main");
-////        ar.setCheck(false);
-////        ar.setUsername(mainUser);
-////        ar.setName(mainUser.getName()+"+"+mainUser.getUsername());
-////        arp.save(ar);
-//        return new ResponseEntity<>(responce,HttpStatus.OK);
-//    }
 
     @PostMapping("/login-user")
     public ResponseEntity<?> loginUser(@RequestBody LoginUser jwtRequest){
@@ -180,6 +164,55 @@ public class SecurityController {
         Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
         System.out.println(details);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PostMapping("/becomemember")
+    public ResponseEntity<?> becomeMember(@RequestBody BecomeMemberDTO user){
+
+        if(user==null){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("wrong sign up credentials");
+        }
+        try {
+            String name = SecurityContextHolder.getContext().getAuthentication().getName();
+            Optional<AcceptRequests> byUserId = arp.findByUserId(name);
+
+            Optional<MainUser> byUsername = userrepo.findByUsername(byUserId.get().getUserId());
+            byUsername.get().setContactNo(user.getPhoneNo());
+            byUsername.get().setPassword(pse.encode(user.getPassword()));
+            userrepo.save(byUsername.get());
+        }catch(Exception e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("wrong sign up credentials");
+        }
+        return ResponseEntity.ok().body("success");
+    }
+
+    @PostMapping("/forget")
+    public ResponseEntity<?> forgetpassword(@RequestBody BecomeMemberDTO user){
+
+        if(user==null){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("wrong phoneNo");
+        }
+
+        this.doAuthenticate("R#%0)"+user.getPassword(),user.getPhoneNo());
+        CustomUserDetails userDetails=userDetailsService.loadUserByUsername(user.getPassword());
+        String token=this.jwtHelper.generateTokenlimit(userDetails);
+        Optional<MainUser> byUsername = userrepo.findByUsername(userDetails.getUsername());
+
+        JwtResponce responce=JwtResponce.builder().Jwttoken(token).username(userDetails.getUsername()).name(byUsername.get().getName()).role(byUsername.get().getRole()).build();
+        return new ResponseEntity<>(responce,HttpStatus.OK);
+    }
+
+    @PostMapping("/newpass")
+    public ResponseEntity<?>  newPassword(@RequestBody Reportbody user){
+
+        if(user==null){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("wrong phoneNo");
+        }
+        String id=SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<MainUser> byUsername = userrepo.findByUsername(id);
+        byUsername.get().setPassword(pse.encode(user.getName()));
+        userrepo.save(byUsername.get());
+        return ResponseEntity.ok().body("Successfully changed");
     }
 
 

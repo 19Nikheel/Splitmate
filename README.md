@@ -21,7 +21,7 @@ Prevents multiple entries using compromised user IDs and passwords.
 
 Integrated greedy algorithm for debt settlement:
 
-Calculates minimum number of transactions required.
+Calculates minimum number of settlements required.
 
 Efficiently determines who owes whom, optimizing settlements among group members.
 

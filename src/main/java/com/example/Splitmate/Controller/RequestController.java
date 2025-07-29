@@ -61,12 +61,31 @@ public class RequestController {
         }
 
         if(art.existsByGroupIdAndName(byGroupId.get(),name)){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name already exist!");  ///important
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name already exist!");  /// not working properly
         }
 
         PushRequests rq=new PushRequests();
-                                                                                //Think again  conflict
         rq.setName(name);
+
+        rq.setGroupId(byGroupId.get());
+        rq.setLastUpdatedTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")));
+        requestRepo.save(rq);
+        return ResponseEntity.ok().body("Request sent");
+    }
+
+    @PostMapping("/send-request")
+    public ResponseEntity<String> senRequest(@RequestParam("groupId") String groupId){
+        Optional<Groups> byGroupId = groupRepo.findByGroupId(groupId);
+        if(byGroupId.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Group not exist!");  ///important
+        }
+
+        PushRequests rq=new PushRequests();
+
+        String name1 = SecurityContextHolder.getContext().getAuthentication().getName();
+        rq.setName(name1);
+        rq.setUserId(name1);
+
         rq.setGroupId(byGroupId.get());
         rq.setLastUpdatedTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")));
         requestRepo.save(rq);
@@ -78,14 +97,14 @@ public class RequestController {
 
     @PostMapping("/accept-request")
     @Transactional
-    public ResponseEntity<String> cnf_request(@RequestParam ("groupId") String gid ,@RequestParam ("name") String name){
+    public ResponseEntity<String> cnf_request(@RequestParam ("groupId") long gid ,@RequestParam ("name") String name){
 
 
         String admin = SecurityContextHolder.getContext().getAuthentication().getName();
 
         AcceptRequests ar=new AcceptRequests();
 
-        Optional<Groups> byGroupId = groupRepo.findByGroupId(gid);
+        Optional<Groups> byGroupId = groupRepo.findById(gid);
         if(byGroupId.isEmpty() ) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
         }
@@ -98,6 +117,18 @@ public class RequestController {
         Optional<PushRequests> pushRequests = requestRepo.findByGroupIdAndName(byGroupId.get(), name);
         if(pushRequests.isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+        String n=name;
+        if(byUsername.isPresent()){
+            name=byUsername.get().getName();
+            ar.setUserId(pushRequests.get().getUserId());
+            ar.setRole("MEMBER");
+            ar.setTokenID(-1);
+        }else{
+            ar.setUserId(name+"+"+gid);
+            ar.setRole("GUEST");
+            ar.setTokenID(1);
+
         }
         int p=0;
         int o=1;
@@ -116,23 +147,14 @@ public class RequestController {
         ar.setGroupId(byGroupId.get());
 
 
-        if(byUsername.isPresent()){
-            ar.setUserId(pushRequests.get().getUserId());
-            ar.setRole("MEMBER");
-            ar.setTokenID(-1);
-        }else{
-            ar.setUserId(name+"+"+gid);
-            ar.setRole("GUEST");
-            ar.setTokenID(1);
 
-        }
         ar.setName(name);
 
         ar.setCheck(true);
         try {
             art.save(ar);
 
-            requestRepo.deleteByNameAndGroupId(name,gid);
+            requestRepo.deleteByNameAndGroupId(n,byGroupId.get().getGroupId());
 
             return ResponseEntity.ok("Successfully Request Accepted");
         }catch(DataIntegrityViolationException  e ){

@@ -36,7 +36,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf->csrf.disable()).cors(cors -> cors.configurationSource(corsConfigurationSource())).authorizeHttpRequests(auth->auth.requestMatchers("/").authenticated()
-                        .requestMatchers("/login","/signup","/signup-guest","/guest-login","/login-user","/invite-request/**","/push-request")
+                        .requestMatchers("/login","/signup","/signup-guest","/guest-login","/forget","/login-user","/invite-request/**","/push-request")
                         .permitAll()
                         .anyRequest().authenticated()).exceptionHandling(ex->ex.authenticationEntryPoint(point).accessDeniedHandler(AccessHandler))
                 .sessionManagement(ses->ses.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -31,6 +31,8 @@ public class Log {
     @Column(name = "Tax")
     private Double tax;
 
+
+
     @Column(name = "Deleted")
     private boolean deleted;
 
@@ -38,4 +40,5 @@ public class Log {
     @JsonIgnore
     @JoinColumn(name="GroupId" ,referencedColumnName = "Id")
     private Groups groupId;
+
 }

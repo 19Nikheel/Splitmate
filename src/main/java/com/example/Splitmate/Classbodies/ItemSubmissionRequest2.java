@@ -5,10 +5,11 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class ItemSubmissionRequest {
+public class ItemSubmissionRequest2 {
 
 
         private String description;
+        private long id;
         private long groupId;
         private double totalMoney;
         private double tax;

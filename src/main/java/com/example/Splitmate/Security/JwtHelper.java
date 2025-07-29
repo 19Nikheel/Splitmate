@@ -108,11 +108,20 @@ public class JwtHelper {
         return doGenerateToken(claims, userDetails.getUsername());
     }
 
-    //while creating the token -
-    //1. Define  claims of the token, like Issuer, Expiration, Subject, and the ID
-    //2. Sign the JWT using the HS512 algorithm and secret key.
-    //3. According to JWS Compact Serialization(https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41#section-3.1)
-    //   compaction of the JWT to a URL-safe string
+    public String generateTokenlimit(CustomUserDetails userDetails) {
+
+        MainUser user = userrepo.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", "otp");
+        claims.put("tokenId",-1);
+
+        return Jwts.builder().setClaims(claims).setSubject(userDetails.getUsername()).setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 150 * 1000))
+                .signWith(SignatureAlgorithm.HS512, secret).compact();
+    }
+
+
     public String doGenerateToken(Map<String, Object> claims, String subject) {
 
         return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis()))
@@ -127,6 +136,7 @@ public class JwtHelper {
         if(tokenId!=-1 && tokenId!=userDetails.getTokenId()){
             return false;
         }
+
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 }

@@ -38,7 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Skip JWT validation for /signup
         if (requestPath.equals("/signup") || requestPath.equals("/login")||
                 requestPath.equals("/signup-guest")|| requestPath.equals("/guest-login")||
-                requestPath.equals("/login-user")|| requestPath.equals("/invite-request/**")|| requestPath.equals("/push-request")) {
+                requestPath.equals("/login-user")|| requestPath.equals("/invite-request/**")|| requestPath.equals("/push-request") ||
+                requestPath.equals("/forget")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -84,7 +85,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication=new UsernamePasswordAuthenticationToken(user,null,user.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                System.out.println(SecurityContextHolder.getContext().getAuthentication().getDetails());
             }else{
                 logger.info("Token validation failed.");
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid  token.");

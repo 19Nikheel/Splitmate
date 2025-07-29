@@ -46,7 +46,7 @@ public class Addingservices {
     private ItemPriceLogRepo itemPriceLogRepo;
 
     @Transactional
-    public void postData(ItemSubmissionRequest ISR){
+    public Groups postData(ItemSubmissionRequest ISR){
 
         Log newLog=new Log();
         newLog.setTotalAmount(ISR.getTotalMoney());
@@ -56,7 +56,7 @@ public class Addingservices {
         newLog.setDeleted(false);
         String str=(ISR.getPayers().size()==1) ? "Full" : "Partial";
         newLog.setMode(str);
-        Groups groupidId = grp.findByGroupId(ISR.getGroupId()).orElseThrow(() -> new RuntimeException("Groupid is wrong"));
+        Groups groupidId = grp.findById(ISR.getGroupId()).orElseThrow(() -> new RuntimeException("Groupid is wrong"));
         newLog.setGroupId(groupidId);
         Log logSave = logRepo.save(newLog);
 
@@ -95,8 +95,56 @@ public class Addingservices {
            transactionRepo.save(transaction);
        }
 
+       return groupidId;
+    }
 
-        bcSheet.updateBalancesFromExpense(ISR,groupidId,true);
+    public ItemSubmissionRequest2 getLogbyId(Log log){
+
+        Groups groupId = log.getGroupId();
+        ItemSubmissionRequest2 ist=new ItemSubmissionRequest2();
+        ist.setId(log.getLogId());
+        ist.setTax(log.getTax());
+        ist.setGroupId(groupId.getId());
+        ist.setTotalMoney(log.getTotalAmount());
+        ist.setDescription(log.getDescription());
+        List<ItemPayerDTO> ipd=new ArrayList<>();
+        List<Transaction> byLogId = transactionRepo.findByLogId(log);
+
+        for(Transaction lp : byLogId){
+            ItemPayerDTO ip=new ItemPayerDTO();
+            ip.setName(lp.getPayerId().getName());
+            ip.setAmount(lp.getAmount());
+            ipd.add(ip);
+        }
+
+        List<ItemDTO> itemDTOS=new ArrayList<>();
+        List<ItemPriceLog> byLogId1 = iplRepo.findByLogId(log);
+
+        for(ItemPriceLog it: byLogId1){
+            ItemDTO itd=new ItemDTO();
+            itd.setUnitPrice(it.getUnitPrice());
+
+            List<ConsumerDTO> cDtos =new ArrayList<>();
+
+
+            List<Consumer> byItemId = consumerRepo.findByItemId(it);
+
+            for(Consumer cons: byItemId ){
+                ConsumerDTO con =new ConsumerDTO();
+                con.setName(cons.getUserId().getName());
+                con.setQuantity(cons.getQuantity());
+                con.setIsShared(cons.getIsShared());
+                cDtos.add(con);
+            }
+            itd.setConsumers(cDtos);
+            itemDTOS.add(itd);
+
+
+        }
+        ist.setPayers(ipd);
+        ist.setItems(itemDTOS);
+
+        return ist;
     }
 
     @Transactional
@@ -137,6 +185,7 @@ public class Addingservices {
                 cDtos.add(con);
             }
             itd.setConsumers(cDtos);
+            itemDTOS.add(itd);
 
 
         }
@@ -153,6 +202,7 @@ public class Addingservices {
         for(Log i:byGroupId){
             WebResponce wr=new WebResponce();
             wr.setAmount(i.getTotalAmount());
+            wr.setDeleted(i.isDeleted());
             wr.setId(i.getLogId());
             wr.setPaidBy(transactionRepo.findByLog(i));
             wr.setTime(i.getTime());

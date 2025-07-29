@@ -4,7 +4,7 @@ package com.example.Splitmate.Controller;
 import com.example.Splitmate.Classbodies.*;
 import com.example.Splitmate.Entity.*;
 import com.example.Splitmate.Repo.*;
-import com.example.Splitmate.ServiceBody.Transaction;
+import com.example.Splitmate.Entity.Settlement;
 import com.example.Splitmate.Services.Addingservices;
 import com.example.Splitmate.Services.AdminServices;
 import com.example.Splitmate.Services.BalanceSheetService;
@@ -50,13 +50,21 @@ public class Controller {
     @Autowired
     private AdminServices adminServices;
 
+    @Autowired
+    private BalanceSheetService bcSheet;
+
+    @Autowired
+    private SettlementRepository settlementRepository;
 
 
     @PostMapping("/post")
+    @Transactional
     public ResponseEntity<String> addpost(@RequestBody ItemSubmissionRequest ISR){
         try{
-            services.postData(ISR);
 
+            Groups groups = services.postData(ISR);
+            bcSheet.updateBalancesFromExpense(ISR,groups,true);    // for future i can make 1 line and second line independent
+            bss.getGroupSimplifiedSettlements(groups);
             return ResponseEntity.ok("Data added successful");
         }catch(RuntimeException e){
             System.out.println(e);
@@ -71,9 +79,15 @@ public class Controller {
         Groups g1 = gRepo.findById(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
 
         Optional<List<UserInfo>> allById = acceptRepo.findAllById(g1);
-
+        List<String> namesByGroupId = adgRepo.findNamesByGroupId(gid);
         if(allById.isEmpty()){
             return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
+        }
+
+        for(UserInfo i: allById.get()){
+            if(namesByGroupId.contains(i.getName())){
+                i.setHost(true);
+            }
         }
         return  ResponseEntity.ok(allById.get());
     }
@@ -83,14 +97,10 @@ public class Controller {
 
         Groups g1 = gRepo.findById(gid).orElseThrow(() -> new RuntimeException("Group not exist"));
 
-        List<Transaction> groupSimplifiedSettlements = bss.getGroupSimplifiedSettlements(g1);
+        List<SettleDto> byGroups = settlementRepository.findByGroups(g1);
 
-//        Optional<List<String>> allById = acceptRepo.findAllById(g1.getId());
-//
-//        if(allById.isEmpty()){
-//            return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No data Available");
-//        }
-        return  ResponseEntity.ok(groupSimplifiedSettlements);
+
+        return  ResponseEntity.ok(byGroups);
     }
 
 
@@ -108,14 +118,16 @@ public class Controller {
 
     @GetMapping("/findRequestList/{groupId}")
     public ResponseEntity<?> getRequestList(@PathVariable ("groupId") long groupId){
-        Optional<List<PushRequests>> byUsername;
+
+
         Optional<Groups> byGroupId = groupRepo.findById(groupId);
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
 
         if( byGroupId.isPresent() ){
             boolean check=adgRepo.existsByGidAndUsername(byGroupId.get().getId(),name);
             if(check){
-                byUsername = prr.findByGroupId(byGroupId.get());
+                List<String> byGroupI = prr.findByGroupI(byGroupId.get());
+                return ResponseEntity.ok(byGroupI);
             }else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Not Authorize to check");
             }
@@ -124,12 +136,13 @@ public class Controller {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("groupId is  Wrong");
         }
 
-        return ResponseEntity.ok(byUsername);
+
 
     }
 
     //@Transactional
     @PostMapping("/group")
+    @Transactional
     public ResponseEntity<?> createGroup(@RequestParam("groupName") String gname , Principal principal){
 
         String userid=principal.getName();
@@ -140,7 +153,7 @@ public class Controller {
         Groups gr=new Groups();
         gr.setName(gname);
         Groups save = gRepo.save(gr);
-        gr.setGroupId(gname.substring(0,4)+save.getId());
+        gr.setGroupId(gname.substring(0,2)+""+save.getId());
         Groups save1 = gRepo.save(gr);
 
         Admin_Group admg=new Admin_Group();
@@ -158,7 +171,7 @@ public class Controller {
         acceptRepo.save(apt);
 
 
-        return ResponseEntity.ok("successfully created "+ save1.getGroupId());
+        return ResponseEntity.ok(save1.getId());
     }
 
     @GetMapping("/findgroupname/{groupId}")
@@ -184,6 +197,8 @@ public class Controller {
         try{
             services.deleteLog(byId.get());
             logRepo.save(byId.get());
+            bss.getGroupSimplifiedSettlements(byId.get().getGroupId());
+
         }catch(Exception e){
             System.out.println(e);      // remind me change
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Deletion Unsuccessful");
@@ -245,5 +260,34 @@ public class Controller {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("log Not Found");
         }
     }
+
+    @GetMapping("/findsinglelog/{logid}")
+    public ResponseEntity<?> getsLog(@PathVariable ("logid") long logid){
+        Optional<Log> byId = logRepo.findById(logid);
+        ItemSubmissionRequest2 logbyId = services.getLogbyId(byId.get());
+        return ResponseEntity.ok().body(logbyId);
+    }
+
+    @GetMapping("/findgroupId/{gid}")
+    public ResponseEntity<?> getid(@PathVariable ("gid") long gid){
+
+
+        Optional<Groups> byGroupId = groupRepo.findById(gid);
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        if(!adgRepo.existsByGidAndUsername(gid,name)){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Only admin can check");
+
+        }
+
+        if( byGroupId.isPresent() ){
+
+            return ResponseEntity.ok().body(byGroupId.get().getGroupId());
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("groupId Not Found");
+        }
+    }
+
+
 
 }

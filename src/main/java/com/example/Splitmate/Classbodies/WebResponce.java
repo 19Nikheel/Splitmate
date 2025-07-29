@@ -17,6 +17,7 @@ import java.util.List;
 @Component
 public class WebResponce {
     private Long id;
+    private boolean isDeleted;
     private List<String> paidBy;
     private List<String> items;
     private List<String> participants;
