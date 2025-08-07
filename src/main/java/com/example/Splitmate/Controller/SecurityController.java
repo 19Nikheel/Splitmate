@@ -163,6 +163,7 @@ public class SecurityController {
     public ResponseEntity<JwtResponce> check(){
         Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
         System.out.println(details);
+
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

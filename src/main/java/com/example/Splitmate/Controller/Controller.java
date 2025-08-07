@@ -187,6 +187,7 @@ public class Controller {
 
     @DeleteMapping("/delete/{logid}")
     public ResponseEntity<?> deleteLogId(@PathVariable ("logid") long logid){
+
         Optional<Log> byId = logRepo.findById(logid);
         byId.get().setDeleted(true);
 

@@ -166,11 +166,13 @@ public class RequestController {
     }
 
     @PutMapping("/realive-auth")
-    public ResponseEntity<String> realiveRequest(@RequestParam("groupId") String groupId,@RequestParam("name") String name){
-        Groups gid = groupRepo.findByGroupId(groupId).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
+    public ResponseEntity<String> realiveRequest(@RequestParam("groupId") long groupId,@RequestParam("name") String name){
+        Groups gid = groupRepo.findById(groupId).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
         AcceptRequests found = art.findByGroupIdAndName(gid,name).orElseThrow(() -> new UsernameNotFoundException("user name not found"));
         found.setCheck(true);
-        found.setTokenID((found.getTokenID()+17)%Integer.MAX_VALUE);
+        if(found.getTokenID()!=-1) {
+            found.setTokenID((found.getTokenID() + 17) % Integer.MAX_VALUE);
+        }
         art.save(found);
         return ResponseEntity.ok("Successful");
     }

@@ -168,7 +168,6 @@ public class BalanceSheetService {
 
 
     public double getGroupTotalBalance(AcceptRequests user, Groups groupId) {
-        // Return 0 if the group doesn't exist in our records
         Optional<List<Balance>> byGroupId = balanceRepository.findByGroupId(groupId);
 
         if(byGroupId.isEmpty()){
@@ -194,7 +193,6 @@ public class BalanceSheetService {
 
 
     public double getGroupBalance(AcceptRequests user1, AcceptRequests user2, Groups groupId) {
-        // Return 0 if the group doesn't exist in our records
         Optional<List<Balance>> byGroupId = balanceRepository.findByGroupId(groupId);
 
         if(byGroupId.isEmpty()){
@@ -295,7 +293,6 @@ public class BalanceSheetService {
      */
     public List<Settlement> calculateSettlements(Map<UserPair, Double> balanceMap,Groups g) {
         // Step 1: Calculate net balances for each user
-        System.out.println(balanceMap);
         Map<AcceptRequests, Double> netBalances = new HashMap<>();
 
         for (Map.Entry<UserPair, Double> entry : balanceMap.entrySet()) {
