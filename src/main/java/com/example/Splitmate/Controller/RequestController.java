@@ -64,6 +64,10 @@ public class RequestController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name already exist!");  /// not working properly
         }
 
+        if(requestRepo.existsByGroupIdAndName(byGroupId.get(),name)){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Name already exist!");  /// not working properly
+        }
+
         PushRequests rq=new PushRequests();
         rq.setName(name);
 
@@ -125,7 +129,7 @@ public class RequestController {
             ar.setRole("MEMBER");
             ar.setTokenID(-1);
         }else{
-            ar.setUserId(name+"+"+gid);
+            ar.setUserId(name+"+"+byGroupId.get().getGroupId());
             ar.setRole("GUEST");
             ar.setTokenID(1);
 
@@ -167,13 +171,16 @@ public class RequestController {
 
     @PutMapping("/realive-auth")
     public ResponseEntity<String> realiveRequest(@RequestParam("groupId") long groupId,@RequestParam("name") String name){
+
         Groups gid = groupRepo.findById(groupId).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
         AcceptRequests found = art.findByGroupIdAndName(gid,name).orElseThrow(() -> new UsernameNotFoundException("user name not found"));
-        found.setCheck(true);
-        if(found.getTokenID()!=-1) {
-            found.setTokenID((found.getTokenID() + 17) % Integer.MAX_VALUE);
+        if(found.getRole().equals("GUEST")) {
+            found.setCheck(true);
+            if (found.getTokenID() != -1) {
+                found.setTokenID((found.getTokenID() + 17) % Integer.MAX_VALUE);
+            }
+            art.save(found);
         }
-        art.save(found);
         return ResponseEntity.ok("Successful");
     }
 

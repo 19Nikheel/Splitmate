@@ -226,9 +226,9 @@ public class Controller {
 
         try{
             List<GroupDetailsDTO> groupDetailsDTOS = adminServices.myGroup(name);
+
             return ResponseEntity.ok(groupDetailsDTOS);
         }catch (Exception e){
-            System.out.println(e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
         }
 
@@ -239,11 +239,13 @@ public class Controller {
     public ResponseEntity<?> findotherGroups(){
         String name = SecurityContextHolder.getContext().getAuthentication().getName();
 
+        if(name.startsWith("@")){
+            name=name.substring(2);
+        }
         try{
             List<GroupDetailsDTO> groupDetailsDTOS = adminServices.otherGroup(name);
             return ResponseEntity.ok(groupDetailsDTOS);
         }catch (Exception e){
-            System.out.println(e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("group not found");
         }
 

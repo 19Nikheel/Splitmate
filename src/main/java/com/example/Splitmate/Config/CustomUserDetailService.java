@@ -36,12 +36,7 @@ public class CustomUserDetailService implements UserDetailsService {
 
             String encodedPassword = pse.encode(usere.getGroupId().getGroupId());
 
-//            return org.springframework.security.core.userdetails.User
-//                    .withUsername("@#"+usere.getUserId())
-//                    .password(encodedPassword)
-//                    .roles(usere.getRole())
-//                    .
-//                    .build();
+
             return CustomUserDetails.withUsername("@#"+usere.getUserId())
                     .password(encodedPassword)
                     .roles(usere.getRole())

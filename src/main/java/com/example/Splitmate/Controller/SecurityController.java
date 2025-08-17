@@ -130,11 +130,10 @@ public class SecurityController {
     @PostMapping("/login-user")
     public ResponseEntity<?> loginUser(@RequestBody LoginUser jwtRequest){
 
+        this.doAuthenticate("@#"+jwtRequest.getName()+"+"+jwtRequest.getUserName(),jwtRequest.getUserName());
 
-        this.doAuthenticate("@#"+jwtRequest.getName()+"+"+jwtRequest.getUsername(),jwtRequest.getUsername());
-
-        CustomUserDetails userDetails=userDetailsService.loadUserByUsername("@#"+jwtRequest.getName()+"+"+jwtRequest.getUsername());
-        Groups gid = groupRepo.findByGroupId(jwtRequest.getUsername()).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
+        CustomUserDetails userDetails=userDetailsService.loadUserByUsername("@#"+jwtRequest.getName()+"+"+jwtRequest.getUserName());
+        Groups gid = groupRepo.findByGroupId(jwtRequest.getUserName()).orElseThrow(() -> new UsernameNotFoundException("group name not found"));
         Optional <AcceptRequests> art=arp.findByGroupIdAndName(gid,jwtRequest.getName());
 
         //Optional <AcceptRequests> art=arp.findByUsernameAndNameId(userrepo.findByUsername(jwtRequest.getUsername()).get(),jwtRequest.getName());
@@ -148,7 +147,7 @@ public class SecurityController {
 
 
 
-            JwtResponce responce=JwtResponce.builder().Jwttoken(token).username(jwtRequest.getName()).name(jwtRequest.getName()).role("GUEST").build();
+            JwtResponce responce=JwtResponce.builder().Jwttoken(token).username(new String(""+gid.getId())).name(jwtRequest.getName()).role("GUEST").build();
             arp.save(art.get());
             return new ResponseEntity<>(responce,HttpStatus.OK);
         }
@@ -159,10 +158,23 @@ public class SecurityController {
 
     }
 
+
+    @GetMapping("/out")
+    public ResponseEntity<JwtResponce> logout(){
+
+        String name = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Optional<AcceptRequests> byUserId = arp.findByUserId(name.substring(2));
+        byUserId.get().setCheck(true);
+        byUserId.get().setTokenID((byUserId.get().getTokenID()+17)%Integer.MAX_VALUE);
+        arp.save(byUserId.get());
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
     @GetMapping("/check")
     public ResponseEntity<JwtResponce> check(){
         Object details = SecurityContextHolder.getContext().getAuthentication().getDetails();
-        System.out.println(details);
+        //System.out.println(details);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -210,6 +222,7 @@ public class SecurityController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("wrong phoneNo");
         }
         String id=SecurityContextHolder.getContext().getAuthentication().getName();
+        System.out.println(id);
         Optional<MainUser> byUsername = userrepo.findByUsername(id);
         byUsername.get().setPassword(pse.encode(user.getName()));
         userrepo.save(byUsername.get());

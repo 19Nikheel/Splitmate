@@ -26,6 +26,7 @@ public interface PushRequestRepo extends JpaRepository<PushRequests,Long> {
 
 
     Optional<PushRequests> findByGroupIdAndName (Groups user,String name);
+    boolean existsByGroupIdAndName(Groups user, String name);
 
 
     @Modifying

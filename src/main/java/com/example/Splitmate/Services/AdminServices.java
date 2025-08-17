@@ -35,9 +35,13 @@ public class AdminServices {
     @Autowired
     private GroupRepo grp;
     public List<GroupDetailsDTO> myGroup(String name){
-        MainUser user = mainuserRepo.findByUsername(name).orElseThrow(() -> new RuntimeException("user not found"));
-        List<Admin_Group> byUsername = AdminRepo.findByUsername(user);
         List<GroupDetailsDTO> gdl=new ArrayList<>();
+        Optional<MainUser> user = mainuserRepo.findByUsername(name);
+        if(user.isEmpty()){
+            return gdl;
+        }
+        List<Admin_Group> byUsername = AdminRepo.findByUsername(user.get());
+
         for(Admin_Group i: byUsername){
             Groups gr=grp.findById(i.getGid()).get();
             GroupDetailsDTO gd=new GroupDetailsDTO();
@@ -52,6 +56,7 @@ public class AdminServices {
     }
 
     public List<GroupDetailsDTO> otherGroup(String name){
+
         List<Groups> groupId = acceptRepo.findGroupsByUserId(name);
 
         List<GroupDetailsDTO> gdl=new ArrayList<>();
