@@ -141,10 +141,18 @@ public class BalanceSheetService {
 
     @Transactional
     public void updateAmounts(List<Settlement> updates) {
+
         for (Settlement update : updates) {
             SettlementId id = new SettlementId(
                     update.getFrom().getId(),
                     update.getTo().getId(),
+                    update.getGroups().getId()
+            );
+
+
+            SettlementId rid = new SettlementId(
+                    update.getTo().getId(),
+                    update.getFrom().getId(),
                     update.getGroups().getId()
             );
 
@@ -158,6 +166,9 @@ public class BalanceSheetService {
                         update.getAmount()
                 );
             } else {
+                if(settlementRepository.existsById(rid)){
+                    settlementRepository.deleteById(rid);
+                }
                 // Save new record
                 settlementRepository.save(update);
             }
