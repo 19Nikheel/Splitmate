@@ -23,6 +23,12 @@ public interface SettlementRepository extends JpaRepository<Settlement, Settleme
                       @Param("amount") Double amount);
 
 
+    @Transactional
+    @Modifying
+    @Query("delete from Settlement s  WHERE s.groups.id = :groupId")
+    void deleteByGroups(@Param("groupId") Long groupId);
+
+
     @Query("SELECT new com.example.Splitmate.Classbodies.SettleDto(t.to.name, t.from.name, t.amount) " +
             "FROM Settlement t WHERE t.groups = :group")
     List<SettleDto> findByGroups(@Param("group") Groups group);

@@ -142,37 +142,9 @@ public class BalanceSheetService {
     @Transactional
     public void updateAmounts(List<Settlement> updates) {
 
-        for (Settlement update : updates) {
-            SettlementId id = new SettlementId(
-                    update.getFrom().getId(),
-                    update.getTo().getId(),
-                    update.getGroups().getId()
-            );
+        settlementRepository.deleteByGroups(updates.get(0).getGroups().getId());
+        settlementRepository.saveAll(updates);
 
-
-            SettlementId rid = new SettlementId(
-                    update.getTo().getId(),
-                    update.getFrom().getId(),
-                    update.getGroups().getId()
-            );
-
-            // Check if record exists
-            if (settlementRepository.existsById(id)) {
-                // Update existing record
-                settlementRepository.updateAmount(
-                        update.getFrom().getId(),
-                        update.getTo().getId(),
-                        update.getGroups().getId(),
-                        update.getAmount()
-                );
-            } else {
-                if(settlementRepository.existsById(rid)){
-                    settlementRepository.deleteById(rid);
-                }
-                // Save new record
-                settlementRepository.save(update);
-            }
-        }
     }
 
 
@@ -357,7 +329,9 @@ public class BalanceSheetService {
             double transferAmount = Math.min(Math.abs(debtorBalance), creditorBalance);
 
             if (transferAmount > 0.001) { // Only create transactions for significant amounts
-                settlements.add(new Settlement(debtor.getKey(), creditor.getKey(),g, transferAmount));
+                settlements.add(new Settlement(debtor.getKey(), creditor.getKey(),g, BigDecimal.valueOf(transferAmount)
+                        .setScale(3, RoundingMode.HALF_UP)
+                        .doubleValue()));
             }
 
             // Update balances after the transaction
